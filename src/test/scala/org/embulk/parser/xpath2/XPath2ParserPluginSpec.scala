@@ -32,7 +32,7 @@ class XPath2ParserPluginSpec {
         Map("path" -> "ns2:id", "name" -> "id", "type" -> "long").asJava,
         Map("path" -> "ns2:title", "name" -> "title", "type" -> "string").asJava,
         Map("path" -> "ns2:meta/ns2:author", "name" -> "author", "type" -> "string").asJava,
-        Map("path" -> "ns2:date", "name" -> "date", "type" -> "timestamp", "format" -> "%Y%m%d").asJava,
+        Map("path" -> "ns2:date", "name" -> "date", "type" -> "timestamp", "format" -> "%Y%m%d", "timezone" -> "UTC").asJava,
         Map("path" -> "ns2:list/ns2:value", "name" -> "list", "type" -> "json").asJava,
       ).asJava)
       .set("namespaces", Map[String, String]("ns1" -> "http://example.com/ns1/", "ns2" -> "http://example.com/ns2/").asJava)

@@ -6,11 +6,8 @@ import com.fasterxml.jackson.annotation.{JsonCreator, JsonValue}
 import com.google.common.base.Optional
 import org.embulk.config.{Config, ConfigDefault, ConfigSource}
 import org.embulk.spi.`type`.{TimestampType, Type}
-import org.embulk.spi.time.TimestampParser
-import org.embulk.spi.time.TimestampParser.{Task, TimestampColumnOption}
+import org.embulk.spi.time.TimestampParser.TimestampColumnOption
 import org.joda.time.DateTimeZone
-
-import scala.beans.BeanProperty
 
 case class SchemaConfig @JsonCreator()(columns: java.util.List[ColumnConfig]) {
   @JsonValue()
@@ -33,7 +30,10 @@ private class TimestampColumnOptionImpl(timezone: Optional[DateTimeZone], format
 
   @JsonCreator()
   def this(src: ConfigSource) = {
-    this(src.get(classOf[Optional[DateTimeZone]], "timezone", Optional.absent[DateTimeZone]()), src.get(classOf[Optional[String]], "format", Optional.absent[String]()), src.get(classOf[Optional[String]], "date", Optional.absent[String]()))
+    this(
+      src.get(classOf[Optional[String]], "timezone", Optional.absent[String]()).transform(x => DateTimeZone.forID(x)),
+      src.get(classOf[Optional[String]], "format", Optional.absent[String]()),
+      src.get(classOf[Optional[String]], "date", Optional.absent[String]()))
   }
 
   @Config("timezone")
