@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<ns1:root
+        xmlns:ns1="http://example.com/ns1/"
+        xmlns:ns2="http://example.com/ns2/">
+    <ns2:entry>
+        <ns2:id>1</ns2:id>
+        <ns2:title>Hello!</ns2:title>
+        <ns2:meta>
+            <ns2:author>maji-KY</ns2:author>
+        </ns2:meta>
+        <ns2:date>20010101</ns2:date>
+    </ns2:entry>
+</ns1:root>
