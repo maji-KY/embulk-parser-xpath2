@@ -9,5 +9,10 @@
             <ns2:author>maji-KY</ns2:author>
         </ns2:meta>
         <ns2:date>20010101</ns2:date>
+        <ns2:list>
+            <ns2:value>a</ns2:value>
+            <ns2:value>b</ns2:value>
+            <ns2:value>c</ns2:value>
+        </ns2:list>
     </ns2:entry>
 </ns1:root>

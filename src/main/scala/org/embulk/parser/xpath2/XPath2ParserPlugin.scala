@@ -11,6 +11,7 @@ import org.embulk.spi._
 import org.embulk.spi.`type`._
 import org.embulk.spi.time.TimestampParser
 import org.embulk.spi.util.FileInputInputStream
+import org.msgpack.value.{Value, Variable}
 import org.slf4j.Logger
 import org.w3c.dom.{Document, Node, NodeList}
 
@@ -61,13 +62,8 @@ class XPath2ParserPlugin extends ParserPlugin {
             val rootNodes = rootXPath.evaluate(doc, XPathConstants.NODESET).asInstanceOf[NodeList]
             (0 until rootNodes.getLength).map(rootNodes.item).foreach { node =>
               columnXPaths.zipWithIndex.foreach { case (xPath, idx) =>
-                val value: Node = xPath.evaluate(node, XPathConstants.NODE).asInstanceOf[Node]
                 val column = schema.getColumn(idx)
-                if (value == null) {
-                  pb.setNull(column)
-                } else {
-                  setColumn(pb, column, value.getTextContent, timestampParsers)
-                }
+                handleColumn(pb, node, xPath, column, timestampParsers)
               }
               pb.addRecord()
             }
@@ -94,12 +90,29 @@ class XPath2ParserPlugin extends ParserPlugin {
     }
   }
 
+  def handleColumn(pb: PageBuilder, node: Node, xPath: XPathExpression, column: Column, timestampParsers: Map[String, TimestampParser]): Unit = {
+    if (column.getType.isInstanceOf[JsonType]) {
+      val value: NodeList = xPath.evaluate(node, XPathConstants.NODESET).asInstanceOf[NodeList]
+      val values: Seq[Value] = (0 until value.getLength).map(value.item).map { valueNode =>
+        new Variable().setStringValue(valueNode.getTextContent).asStringValue()
+      }
+      val jsonValue = new Variable().setArrayValue(values.asJava).asArrayValue()
+      pb.setJson(column, jsonValue)
+    } else {
+      val value: Node = xPath.evaluate(node, XPathConstants.NODE).asInstanceOf[Node]
+      if (value == null) {
+        pb.setNull(column)
+      } else {
+        setColumn(pb, column, value.getTextContent, timestampParsers)
+      }
+    }
+  }
+
   def setColumn(pb: PageBuilder, column: Column, value: String, timestampParsers: Map[String, TimestampParser]): Unit = column.getType match {
     case _: StringType => pb.setString(column, value)
     case _: LongType => pb.setLong(column, value.toLong)
     case _: DoubleType => pb.setDouble(column, value.toDouble)
     case _: BooleanType => pb.setBoolean(column, value.toBoolean)
-    case _: JsonType => pb.setString(column, value) // treat json as string.
     case _: TimestampType => pb.setTimestamp(column, timestampParsers(column.getName).parse(value))
   }
 
