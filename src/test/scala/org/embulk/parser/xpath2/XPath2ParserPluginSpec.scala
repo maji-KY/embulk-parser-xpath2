@@ -6,6 +6,7 @@ import java.util
 import org.embulk.EmbulkTestRuntime
 import org.embulk.config.{ConfigSource, TaskSource}
 import org.embulk.spi._
+import org.embulk.spi.json.JsonParser
 import org.embulk.spi.time.Timestamp
 import org.embulk.spi.util.InputStreamFileInput
 import org.junit.Assert._
@@ -31,7 +32,8 @@ class XPath2ParserPluginSpec {
         Map("path" -> "ns2:id", "name" -> "id", "type" -> "long").asJava,
         Map("path" -> "ns2:title", "name" -> "title", "type" -> "string").asJava,
         Map("path" -> "ns2:meta/ns2:author", "name" -> "author", "type" -> "string").asJava,
-        Map("path" -> "ns2:date", "name" -> "date", "type" -> "timestamp", "format" -> "%Y%m%d").asJava
+        Map("path" -> "ns2:date", "name" -> "date", "type" -> "timestamp", "format" -> "%Y%m%d").asJava,
+        Map("path" -> "ns2:list/ns2:value", "name" -> "list", "type" -> "json").asJava,
       ).asJava)
       .set("namespaces", Map[String, String]("ns1" -> "http://example.com/ns1/", "ns2" -> "http://example.com/ns2/").asJava)
       .set("out", Map[String, String]("type" -> "stdout").asJava)
@@ -108,7 +110,7 @@ class XPath2ParserPluginSpec {
                   if (reader.isNull(column)) {
                     record.put(column.getName, null)
                   } else {
-                    record.put(column.getName, reader.getString(column))
+                    record.put(column.getName, reader.getJson(column))
                   }
                 }
               })
@@ -128,7 +130,7 @@ class XPath2ParserPluginSpec {
 
     println(result)
 
-    assertEquals(ArrayBuffer(Map("date" -> Timestamp.ofEpochSecond(978307200L), "title" -> "Hello!", "author" -> "maji-KY", "id" -> 1L)), result)
+    assertEquals(ArrayBuffer(Map("date" -> Timestamp.ofEpochSecond(978307200L), "list" -> new JsonParser().parse("""["a","b","c"]"""), "title" -> "Hello!", "author" -> "maji-KY", "id" -> 1L)), result)
   }
 
 }
