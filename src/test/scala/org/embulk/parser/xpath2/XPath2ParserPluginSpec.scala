@@ -22,6 +22,7 @@ class XPath2ParserPluginSpec {
   def runtime = new EmbulkTestRuntime
 
   val dataPath: String = classOf[XPath2ParserPlugin].getClassLoader.getResource("data.xml").getPath
+  val invalidDataPath: String = classOf[XPath2ParserPlugin].getClassLoader.getResource("invalid-data.xml").getPath
 
   def configSource: ConfigSource = Exec.newConfigSource()
     .set("in", Map[String, String]("type" -> "file", "path_prefix" -> dataPath).asJava)
@@ -39,14 +40,15 @@ class XPath2ParserPluginSpec {
     .set("namespaces", Map[String, String]("ns1" -> "http://example.com/ns1/", "ns2" -> "http://example.com/ns2/").asJava)
     .set("out", Map[String, String]("type" -> "stdout").asJava)
 
-  @Test def test() {
+  @Test def testParseXML() {
 
-    val task = configSource.loadConfig(classOf[PluginTask])
+    val cs = configSource
+    val task = cs.loadConfig(classOf[PluginTask])
 
     var schema: Schema = null
 
     val plugin = new XPath2ParserPlugin()
-    plugin.transaction(configSource, (_: TaskSource, s: Schema) => {schema = s})
+    plugin.transaction(cs, (_: TaskSource, s: Schema) => {schema = s})
 
     val result: mutable.Buffer[collection.mutable.Map[String, Any]] = mutable.Buffer()
 
@@ -83,7 +85,64 @@ class XPath2ParserPluginSpec {
     ), result)
   }
 
+  @Test(expected = classOf[DataException]) def testStopOnInvalid() {
+
+    val cs = configSource.set("stop_on_invalid_record", true)
+    val task = cs.loadConfig(classOf[PluginTask])
+
+    var schema: Schema = null
+
+    val plugin = new XPath2ParserPlugin()
+    plugin.transaction(cs, (_: TaskSource, s: Schema) => {schema = s})
+
+    val result: mutable.Buffer[collection.mutable.Map[String, Any]] = mutable.Buffer()
+
+    plugin.run(
+      task.dump(),
+      schema,
+      new InputStreamFileInput(Exec.getBufferAllocator(), new FileInputStream(new File(invalidDataPath))),
+      new TestTransactionalPageOutput(schema, result)
+    )
+
+  }
+
+  @Test() def testSkipOnInvalid() {
+
+    val cs = configSource
+    val task = cs.loadConfig(classOf[PluginTask])
+
+    var schema: Schema = null
+
+    val plugin = new XPath2ParserPlugin()
+    plugin.transaction(cs, (_: TaskSource, s: Schema) => {schema = s})
+
+    val result: mutable.Buffer[collection.mutable.Map[String, Any]] = mutable.Buffer()
+
+    plugin.run(
+      task.dump(),
+      schema,
+      new InputStreamFileInput(Exec.getBufferAllocator(), new FileInputStream(new File(invalidDataPath))),
+      new TestTransactionalPageOutput(schema, result)
+    )
+
+
+    assertEquals(ArrayBuffer(
+      Map(
+        "id" -> 1L,
+        "title" -> "Hello!",
+        "author" -> "maji-KY",
+        "date" -> Timestamp.ofEpochSecond(978274800L),
+        "date_time" -> Timestamp.ofEpochSecond(978274800L),
+        "list" -> new JsonParser().parse("""["a","b","c"]"""),
+        "rating_sub" -> 2.5d,
+        "released" -> true,
+      )
+    ), result)
+  }
+
 }
+
+
 
 class TestTransactionalPageOutput(schema: Schema, result: mutable.Buffer[collection.mutable.Map[String, Any]])
   extends TransactionalPageOutput {

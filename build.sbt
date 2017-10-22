@@ -16,6 +16,7 @@ lazy val commonSettings = Seq(
   ),
   resolvers += Resolver.jcenterRepo,
   libraryDependencies ++= Seq(
+    "com.ximpleware" % "vtd-xml" % "2.13.4",
     "org.embulk" % "embulk-core" % embulkVersion,
     "org.embulk" % "embulk-core" % embulkVersion classifier "tests",
     "junit" % "junit" % "4.+" % "test",
