@@ -2,7 +2,7 @@ lazy val root = (project in file(".")).
   settings(
     inThisBuild(List(
       organization := "com.github.maji-KY",
-      scalaVersion := "2.12.3",
+      scalaVersion := "2.12.4",
       version := "0.0.1-SNAPSHOT"
     )),
     name := "embulk-parser-xpath2",

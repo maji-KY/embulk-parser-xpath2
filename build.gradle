@@ -25,7 +25,7 @@ dependencies {
     testCompile "org.embulk:embulk-standards:0.8.32"
     testCompile "junit:junit:4.+"
 
-    compile group: 'org.scala-lang', name: 'scala-library', version: '2.12.3'
+    compile group: 'org.scala-lang', name: 'scala-library', version: '2.12.4'
     testCompile group: 'org.scalatest', name: 'scalatest_2.12', version: '3.0.4'
 
 }
