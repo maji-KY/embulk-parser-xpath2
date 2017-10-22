@@ -13,16 +13,19 @@ configurations {
     provided
 }
 
-version = "0.0.3.pre"
+version = "0.0.4.pre"
+ext {
+    embulkVersion = "0.8.35"
+}
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
 dependencies {
-    compile  "org.embulk:embulk-core:0.8.32"
-    provided "org.embulk:embulk-core:0.8.32"
-    testCompile "org.embulk:embulk-core:0.8.32:tests"
-    testCompile "org.embulk:embulk-standards:0.8.32"
+    compile  "org.embulk:embulk-core:${embulkVersion}"
+    provided "org.embulk:embulk-core:${embulkVersion}"
+    testCompile "org.embulk:embulk-core:${embulkVersion}:tests"
+    testCompile "org.embulk:embulk-standards:${embulkVersion}"
     testCompile "junit:junit:4.+"
 
     compile group: 'org.scala-lang', name: 'scala-library', version: '2.12.4'
