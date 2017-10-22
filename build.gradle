@@ -13,19 +13,22 @@ configurations {
     provided
 }
 
-version = "0.0.3-SNAPSHOT"
+version = "0.0.4"
+ext {
+    embulkVersion = "0.8.35"
+}
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
 dependencies {
-    compile  "org.embulk:embulk-core:0.8.32"
-    provided "org.embulk:embulk-core:0.8.32"
-    testCompile "org.embulk:embulk-core:0.8.32:tests"
-    testCompile "org.embulk:embulk-standards:0.8.32"
+    compile  "org.embulk:embulk-core:${embulkVersion}"
+    provided "org.embulk:embulk-core:${embulkVersion}"
+    testCompile "org.embulk:embulk-core:${embulkVersion}:tests"
+    testCompile "org.embulk:embulk-standards:${embulkVersion}"
     testCompile "junit:junit:4.+"
 
-    compile group: 'org.scala-lang', name: 'scala-library', version: '2.12.3'
+    compile group: 'org.scala-lang', name: 'scala-library', version: '2.12.4'
     testCompile group: 'org.scalatest', name: 'scalatest_2.12', version: '3.0.4'
 
 }
@@ -36,6 +39,13 @@ task classpath(type: Copy, dependsOn: ["jar"]) {
     into "classpath"
 }
 clean { delete "classpath" }
+
+test {
+    testLogging {
+        events 'failed'
+        exceptionFormat 'full'
+    }
+}
 
 task gem(type: JRubyExec, dependsOn: ["gemspec", "classpath"]) {
     jrubyArgs "-rrubygems/gem_runner", "-eGem::GemRunner.new.run(ARGV)", "build"

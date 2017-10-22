@@ -9,10 +9,25 @@
             <ns2:author>maji-KY</ns2:author>
         </ns2:meta>
         <ns2:date>20010101</ns2:date>
+        <ns2:dateTime>2000-12-31 15:00:00</ns2:dateTime>
         <ns2:list>
             <ns2:value>a</ns2:value>
             <ns2:value>b</ns2:value>
             <ns2:value>c</ns2:value>
         </ns2:list>
+        <ns2:rating by="subscribers">2.5</ns2:rating>
+        <ns2:rating>3.5</ns2:rating>
+        <ns2:released>true</ns2:released>
+    </ns2:entry>
+    <ns2:entry>
+        <ns2:id>2</ns2:id>
+        <ns2:title>Bonjour!</ns2:title>
+        <ns2:meta>
+            <ns2:author>maji-KY</ns2:author>
+        </ns2:meta>
+        <ns2:date>20010101</ns2:date>
+        <ns2:list></ns2:list>
+        <ns2:rating>3.5</ns2:rating>
+        <ns2:released>false</ns2:released>
     </ns2:entry>
 </ns1:root>
