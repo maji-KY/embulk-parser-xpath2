@@ -9,8 +9,7 @@ build/
 /.settings/
 /.metadata/
 .classpath
-.project
+project/project
 /bin/
-project
 *.iml
 out
