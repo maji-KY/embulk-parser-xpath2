@@ -22,6 +22,7 @@ sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
 dependencies {
+    compile "com.ximpleware:vtd-xml:2.13.4"
     compile  "org.embulk:embulk-core:${embulkVersion}"
     provided "org.embulk:embulk-core:${embulkVersion}"
     testCompile "org.embulk:embulk-core:${embulkVersion}:tests"

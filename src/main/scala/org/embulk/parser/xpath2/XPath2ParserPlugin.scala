@@ -1,10 +1,7 @@
 package org.embulk.parser.xpath2
 
-import java.util
-import javax.xml.namespace.NamespaceContext
-import javax.xml.parsers.{DocumentBuilder, DocumentBuilderFactory}
-import javax.xml.xpath.{XPathConstants, XPathExpression, XPathFactory}
-
+import com.google.common.io.ByteStreams
+import com.ximpleware.{AutoPilot, VTDGen, VTDNav}
 import org.embulk.config._
 import org.embulk.parser.xpath2.config.ColumnConfig
 import org.embulk.spi._
@@ -13,21 +10,14 @@ import org.embulk.spi.time.TimestampParser
 import org.embulk.spi.util.FileInputInputStream
 import org.msgpack.value.{Value, Variable}
 import org.slf4j.Logger
-import org.w3c.dom.{Document, Node, NodeList}
 
+import scala.annotation.tailrec
 import scala.collection.JavaConverters._
-import scala.collection.immutable
 import scala.util.control.NonFatal
 
 class XPath2ParserPlugin extends ParserPlugin {
 
-  val logger: Logger = Exec.getLogger(classOf[XPath2ParserPlugin])
-
-  def docBuilder: DocumentBuilder = {
-    val factory: DocumentBuilderFactory = DocumentBuilderFactory.newInstance
-    factory.setNamespaceAware(true)
-    factory.newDocumentBuilder()
-  }
+  private[this] val logger: Logger = Exec.getLogger(classOf[XPath2ParserPlugin])
 
   override def transaction(config: ConfigSource, control: ParserPlugin.Control): Unit = {
     val task = config.loadConfig(classOf[PluginTask])
@@ -42,73 +32,83 @@ class XPath2ParserPlugin extends ParserPlugin {
     val task: PluginTask = taskSource.loadTask(classOf[PluginTask])
     val stopOnInvalidRecord: Boolean = task.getStopOnInvalidRecord
 
-    val xPathInstance = XPathFactory.newInstance.newXPath()
-    xPathInstance.setNamespaceContext(new NamespaceContext {
-      override def getPrefix(namespaceURI: String): String = task.getNamespaces.conf.asScala.collectFirst { case (_, v) if v == namespaceURI => v }.orNull
-      override def getPrefixes(namespaceURI: String): util.Iterator[_] = task.getNamespaces.conf.asScala.keys.asJava.iterator()
-      override def getNamespaceURI(prefix: String): String = task.getNamespaces.conf.asScala(prefix)
-    })
-
-    val rootXPath: XPathExpression = xPathInstance.compile(task.getRoot)
-    val columnXPaths: immutable.Seq[XPathExpression] = task.getSchema.columns.asScala.map(x => xPathInstance.compile(x.path)).toList
-
     val timestampParsers: Map[String, TimestampParser] = task.getSchema.columns.asScala
       .collect { case ColumnConfig(_, name, _, Some(timestampColumnOption), _) => (name, new TimestampParser(task, timestampColumnOption)) }.toMap
+    val columnsWithIndex: Seq[(ColumnConfig, Int)] = task.getSchema.columns.asScala.zipWithIndex
+
+    val vg = new VTDGen
 
     LoanPattern(new PageBuilder(Exec.getBufferAllocator, schema, output)) { pb =>
       while (input.nextFile()) {
-        parseXML(input) match {
-          case Right(doc) =>
-            val rootNodes = rootXPath.evaluate(doc, XPathConstants.NODESET).asInstanceOf[NodeList]
-            (0 until rootNodes.getLength).map(rootNodes.item).foreach { node =>
-              columnXPaths.zipWithIndex.foreach { case (xPath, idx) =>
+        LoanPattern(new FileInputInputStream(input)) { fiis =>
+
+          vg.setDoc(ByteStreams.toByteArray(fiis))
+          vg.parse(true)
+
+          val nav = vg.getNav
+          val rootElementAutoPilot = new AutoPilot(nav)
+          val columnElementAutoPilot = new AutoPilot(nav)
+          task.getNamespaces.conf.asScala.foreach { case (prefix, namespaceURI) =>
+            rootElementAutoPilot.declareXPathNameSpace(prefix, namespaceURI)
+            columnElementAutoPilot.declareXPathNameSpace(prefix, namespaceURI)
+          }
+
+          @tailrec
+          def execEachRecord(rootAp: AutoPilot): Unit = if (rootAp.evalXPath() != -1) {
+            nav.push()
+            try {
+              columnsWithIndex.foreach { case (columnConfig, idx) =>
+                nav.push()
+                columnElementAutoPilot.selectXPath(columnConfig.path)
                 val column = schema.getColumn(idx)
-                handleColumn(pb, node, xPath, column, timestampParsers)
+                handleColumn(pb, nav, columnElementAutoPilot, column, timestampParsers)
+                nav.pop()
               }
               pb.addRecord()
+            } catch {
+              case NonFatal(e) => if (stopOnInvalidRecord) {
+                throw new DataException(e)
+              } else {
+                logger.warn(s"Skipped invalid record $e")
+              }
             }
-          case Left(e) =>
-            if(stopOnInvalidRecord) {
-              throw new DataException(e)
-            } else {
-              logger.warn(s"Skipped invalid record $e")
-            }
+            nav.pop()
+            execEachRecord(rootAp)
+          }
+
+          rootElementAutoPilot.selectXPath(task.getRoot)
+          execEachRecord(rootElementAutoPilot)
         }
+
         pb.flush()
       }
       pb.finish()
-      pb.close()
     }
   }
 
-  def parseXML(input: FileInput): Either[Throwable, Document] = {
-    val stream = new FileInputInputStream(input)
-    try {
-      Right(docBuilder.parse(stream))
-    } catch {
-      case NonFatal(e) => Left(e)
-    }
-  }
-
-  def handleColumn(pb: PageBuilder, node: Node, xPath: XPathExpression, column: Column, timestampParsers: Map[String, TimestampParser]): Unit = {
+  final def handleColumn(pb: PageBuilder, nav: VTDNav, columnAp: AutoPilot, column: Column, timestampParsers: Map[String, TimestampParser]): Unit = {
     if (column.getType.isInstanceOf[JsonType]) {
-      val value: NodeList = xPath.evaluate(node, XPathConstants.NODESET).asInstanceOf[NodeList]
-      val values: Seq[Value] = (0 until value.getLength).map(value.item).map { valueNode =>
-        new Variable().setStringValue(valueNode.getTextContent).asStringValue()
+      val list = new java.util.ArrayList[Value]()
+      @tailrec
+      def eachJsonValue(cAp: AutoPilot): Unit = if (cAp.evalXPath() != -1) {
+        val index = nav.getText
+        if (index != -1) list.add(new Variable().setStringValue(nav.toString(index)).asStringValue())
+        eachJsonValue(cAp)
       }
-      val jsonValue = new Variable().setArrayValue(values.asJava).asArrayValue()
+      eachJsonValue(columnAp)
+      val jsonValue = new Variable().setArrayValue(list).asArrayValue()
       pb.setJson(column, jsonValue)
     } else {
-      val value: Node = xPath.evaluate(node, XPathConstants.NODE).asInstanceOf[Node]
-      if (value == null) {
+      if (columnAp.evalXPath() == -1) {
         pb.setNull(column)
       } else {
-        setColumn(pb, column, value.getTextContent, timestampParsers)
+        val index = nav.getText
+        setColumn(pb, column, nav.toString(index), timestampParsers)
       }
     }
   }
 
-  def setColumn(pb: PageBuilder, column: Column, value: String, timestampParsers: Map[String, TimestampParser]): Unit = column.getType match {
+  final def setColumn(pb: PageBuilder, column: Column, value: String, timestampParsers: Map[String, TimestampParser]): Unit = column.getType match {
     case _: StringType => pb.setString(column, value)
     case _: LongType => pb.setLong(column, value.toLong)
     case _: DoubleType => pb.setDouble(column, value.toDouble)
