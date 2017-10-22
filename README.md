@@ -56,3 +56,9 @@ Then you can fetch entries from the following xml:
 ```
 $ ./gradlew gem
 ```
+
+## Benchmark
+
+```
+$ sbt benchmark/jmh:run
+```

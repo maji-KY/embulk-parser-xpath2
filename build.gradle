@@ -37,6 +37,13 @@ task classpath(type: Copy, dependsOn: ["jar"]) {
 }
 clean { delete "classpath" }
 
+test {
+    testLogging {
+        events 'failed'
+        exceptionFormat 'full'
+    }
+}
+
 task gem(type: JRubyExec, dependsOn: ["gemspec", "classpath"]) {
     jrubyArgs "-rrubygems/gem_runner", "-eGem::GemRunner.new.run(ARGV)", "build"
     script "${project.name}.gemspec"
