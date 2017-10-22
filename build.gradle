@@ -13,7 +13,7 @@ configurations {
     provided
 }
 
-version = "0.0.3-SNAPSHOT"
+version = "0.0.3.pre"
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
