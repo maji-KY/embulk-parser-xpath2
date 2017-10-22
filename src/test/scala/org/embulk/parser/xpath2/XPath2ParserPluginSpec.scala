@@ -32,8 +32,11 @@ class XPath2ParserPluginSpec {
         Map("path" -> "ns2:id", "name" -> "id", "type" -> "long").asJava,
         Map("path" -> "ns2:title", "name" -> "title", "type" -> "string").asJava,
         Map("path" -> "ns2:meta/ns2:author", "name" -> "author", "type" -> "string").asJava,
-        Map("path" -> "ns2:date", "name" -> "date", "type" -> "timestamp", "format" -> "%Y%m%d", "timezone" -> "UTC").asJava,
+        Map("path" -> "ns2:date", "name" -> "date", "type" -> "timestamp", "format" -> "%Y%m%d", "timezone" -> "Asia/Tokyo").asJava,
+        Map("path" -> "ns2:dateTime", "name" -> "date_time", "type" -> "timestamp", "format" -> "%Y-%m-%d %H:%M:%S", "timezone" -> "UTC").asJava,
         Map("path" -> "ns2:list/ns2:value", "name" -> "list", "type" -> "json").asJava,
+        Map("path" -> "ns2:rating[@by='subscribers']", "name" -> "rating_sub", "type" -> "double").asJava,
+        Map("path" -> "ns2:released", "name" -> "released", "type" -> "boolean").asJava,
       ).asJava)
       .set("namespaces", Map[String, String]("ns1" -> "http://example.com/ns1/", "ns2" -> "http://example.com/ns2/").asJava)
       .set("out", Map[String, String]("type" -> "stdout").asJava)
@@ -130,7 +133,28 @@ class XPath2ParserPluginSpec {
 
     println(result)
 
-    assertEquals(ArrayBuffer(Map("date" -> Timestamp.ofEpochSecond(978307200L), "list" -> new JsonParser().parse("""["a","b","c"]"""), "title" -> "Hello!", "author" -> "maji-KY", "id" -> 1L)), result)
+    assertEquals(ArrayBuffer(
+      Map(
+        "id" -> 1L,
+        "title" -> "Hello!",
+        "author" -> "maji-KY",
+        "date" -> Timestamp.ofEpochSecond(978274800L),
+        "date_time" -> Timestamp.ofEpochSecond(978274800L),
+        "list" -> new JsonParser().parse("""["a","b","c"]"""),
+        "rating_sub" -> 2.5d,
+        "released" -> true,
+      ),
+      Map(
+        "id" -> 2L,
+        "title" -> "Bonjour!",
+        "author" -> "maji-KY",
+        "date" -> Timestamp.ofEpochSecond(978274800L),
+        "date_time" -> null,
+        "list" -> new JsonParser().parse("[]"),
+        "rating_sub" -> null,
+        "released" -> false,
+      )
+    ), result)
   }
 
 }
