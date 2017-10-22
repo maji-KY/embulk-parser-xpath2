@@ -13,7 +13,7 @@ configurations {
     provided
 }
 
-version = "0.0.4.pre"
+version = "0.0.4"
 ext {
     embulkVersion = "0.8.35"
 }
