@@ -23,23 +23,23 @@ class XPath2ParserPluginSpec {
 
   val dataPath: String = classOf[XPath2ParserPlugin].getClassLoader.getResource("data.xml").getPath
 
-  @Test def test() {
+  def configSource: ConfigSource = Exec.newConfigSource()
+    .set("in", Map[String, String]("type" -> "file", "path_prefix" -> dataPath).asJava)
+    .set("root", "/ns1:root/ns2:entry")
+    .set("schema", List[util.Map[String, String]](
+      Map("path" -> "ns2:id", "name" -> "id", "type" -> "long").asJava,
+      Map("path" -> "ns2:title", "name" -> "title", "type" -> "string").asJava,
+      Map("path" -> "ns2:meta/ns2:author", "name" -> "author", "type" -> "string").asJava,
+      Map("path" -> "ns2:date", "name" -> "date", "type" -> "timestamp", "format" -> "%Y%m%d", "timezone" -> "Asia/Tokyo").asJava,
+      Map("path" -> "ns2:dateTime", "name" -> "date_time", "type" -> "timestamp", "format" -> "%Y-%m-%d %H:%M:%S", "timezone" -> "UTC").asJava,
+      Map("path" -> "ns2:list/ns2:value", "name" -> "list", "type" -> "json").asJava,
+      Map("path" -> "ns2:rating[@by='subscribers']", "name" -> "rating_sub", "type" -> "double").asJava,
+      Map("path" -> "ns2:released", "name" -> "released", "type" -> "boolean").asJava,
+    ).asJava)
+    .set("namespaces", Map[String, String]("ns1" -> "http://example.com/ns1/", "ns2" -> "http://example.com/ns2/").asJava)
+    .set("out", Map[String, String]("type" -> "stdout").asJava)
 
-    val configSource: ConfigSource = Exec.newConfigSource()
-      .set("in", Map[String, String]("type" -> "file", "path_prefix" -> dataPath).asJava)
-      .set("root", "/ns1:root/ns2:entry")
-      .set("schema", List[util.Map[String, String]](
-        Map("path" -> "ns2:id", "name" -> "id", "type" -> "long").asJava,
-        Map("path" -> "ns2:title", "name" -> "title", "type" -> "string").asJava,
-        Map("path" -> "ns2:meta/ns2:author", "name" -> "author", "type" -> "string").asJava,
-        Map("path" -> "ns2:date", "name" -> "date", "type" -> "timestamp", "format" -> "%Y%m%d", "timezone" -> "Asia/Tokyo").asJava,
-        Map("path" -> "ns2:dateTime", "name" -> "date_time", "type" -> "timestamp", "format" -> "%Y-%m-%d %H:%M:%S", "timezone" -> "UTC").asJava,
-        Map("path" -> "ns2:list/ns2:value", "name" -> "list", "type" -> "json").asJava,
-        Map("path" -> "ns2:rating[@by='subscribers']", "name" -> "rating_sub", "type" -> "double").asJava,
-        Map("path" -> "ns2:released", "name" -> "released", "type" -> "boolean").asJava,
-      ).asJava)
-      .set("namespaces", Map[String, String]("ns1" -> "http://example.com/ns1/", "ns2" -> "http://example.com/ns2/").asJava)
-      .set("out", Map[String, String]("type" -> "stdout").asJava)
+  @Test def test() {
 
     val task = configSource.loadConfig(classOf[PluginTask])
 
@@ -54,81 +54,7 @@ class XPath2ParserPluginSpec {
       task.dump(),
       schema,
       new InputStreamFileInput(Exec.getBufferAllocator(), new FileInputStream(new File(dataPath))),
-      new TransactionalPageOutput() {
-
-        import org.embulk.spi.PageReader
-
-        val reader = new PageReader(schema)
-
-        override def add(page: Page) = {
-          reader.setPage(page)
-
-          while (reader.nextRecord()) {
-            val record: collection.mutable.Map[String, Any] = collection.mutable.Map()
-
-            schema.getColumns().asScala.foreach { column =>
-
-              column.visit(new ColumnVisitor() {
-                override def timestampColumn(column: Column): Unit = {
-                  if (reader.isNull(column)) {
-                    record.put(column.getName, null)
-                  } else {
-                    record.put(column.getName, reader.getTimestamp(column))
-                  }
-                }
-
-                override def stringColumn(column: Column): Unit = {
-                  if (reader.isNull(column)) {
-                    record.put(column.getName, null)
-                  } else {
-                    record.put(column.getName, reader.getString(column))
-                  }
-                }
-
-                override def longColumn(column: Column): Unit = {
-                  if (reader.isNull(column)) {
-                    record.put(column.getName, null)
-                  } else {
-                    record.put(column.getName, reader.getLong(column))
-                  }
-                }
-
-                override def doubleColumn(column: Column): Unit = {
-                  if (reader.isNull(column)) {
-                    record.put(column.getName, null)
-                  } else {
-                    record.put(column.getName, reader.getDouble(column))
-                  }
-                }
-
-                override def booleanColumn(column: Column): Unit = {
-                  if (reader.isNull(column)) {
-                    record.put(column.getName, null)
-                  } else {
-                    record.put(column.getName, reader.getBoolean(column))
-                  }
-                }
-
-                override def jsonColumn(column: Column): Unit = {
-                  if (reader.isNull(column)) {
-                    record.put(column.getName, null)
-                  } else {
-                    record.put(column.getName, reader.getJson(column))
-                  }
-                }
-              })
-
-
-            }
-            result += record
-          }
-        }
-
-        override def commit() = Exec.newTaskReport()
-        override def abort() = {}
-        override def finish() = {}
-        override def close() = {}
-      }
+      new TestTransactionalPageOutput(schema, result)
     )
 
     println(result)
@@ -157,4 +83,79 @@ class XPath2ParserPluginSpec {
     ), result)
   }
 
+}
+
+class TestTransactionalPageOutput(schema: Schema, result: mutable.Buffer[collection.mutable.Map[String, Any]])
+  extends TransactionalPageOutput {
+  import org.embulk.spi.PageReader
+
+  val reader = new PageReader(schema)
+
+  override def add(page: Page) = {
+    reader.setPage(page)
+
+    while (reader.nextRecord()) {
+      val record: collection.mutable.Map[String, Any] = collection.mutable.Map()
+
+      schema.getColumns().asScala.foreach { column =>
+        column.visit(new TestColumnVisitor(reader, record))
+      }
+      result += record
+    }
+  }
+
+  override def commit() = Exec.newTaskReport()
+  override def abort() = {}
+  override def finish() = {}
+  override def close() = {}
+}
+
+class TestColumnVisitor(reader: PageReader, record: collection.mutable.Map[String, Any]) extends ColumnVisitor {
+  override def timestampColumn(column: Column): Unit = {
+    if (reader.isNull(column)) {
+      record.put(column.getName, null)
+    } else {
+      record.put(column.getName, reader.getTimestamp(column))
+    }
+  }
+
+  override def stringColumn(column: Column): Unit = {
+    if (reader.isNull(column)) {
+      record.put(column.getName, null)
+    } else {
+      record.put(column.getName, reader.getString(column))
+    }
+  }
+
+  override def longColumn(column: Column): Unit = {
+    if (reader.isNull(column)) {
+      record.put(column.getName, null)
+    } else {
+      record.put(column.getName, reader.getLong(column))
+    }
+  }
+
+  override def doubleColumn(column: Column): Unit = {
+    if (reader.isNull(column)) {
+      record.put(column.getName, null)
+    } else {
+      record.put(column.getName, reader.getDouble(column))
+    }
+  }
+
+  override def booleanColumn(column: Column): Unit = {
+    if (reader.isNull(column)) {
+      record.put(column.getName, null)
+    } else {
+      record.put(column.getName, reader.getBoolean(column))
+    }
+  }
+
+  override def jsonColumn(column: Column): Unit = {
+    if (reader.isNull(column)) {
+      record.put(column.getName, null)
+    } else {
+      record.put(column.getName, reader.getJson(column))
+    }
+  }
 }
