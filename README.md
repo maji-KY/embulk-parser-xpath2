@@ -1,4 +1,6 @@
 # Xml parser plugin for Embulk
+[![Gem Version](https://badge.fury.io/rb/embulk-parser-xpath2.svg)](https://badge.fury.io/rb/embulk-parser-xpath2)
+[![Build Status](https://travis-ci.org/maji-KY/embulk-parser-xpath2.svg?branch=develop)](https://travis-ci.org/maji-KY/embulk-parser-xpath2)
 
 Embulk parser plugin for parsing xml data by XPath perfectly!
 
