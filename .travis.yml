@@ -1,11 +1,18 @@
-language: scala
-scala:
-  - 2.12.4
+language: ruby
 jdk:
   - oraclejdk8
+rvm:
+  - jruby-head
+
+before_script:
+  - curl --create-dirs -o ~/bin/embulk -L http://dl.embulk.org/embulk-latest.jar
+  - chmod +x ~/bin/embulk
+
 script:
   - gradle test
   - gradle gem
+  - embulk gem install --local $(ls pkg/embulk-parser-xpath2-*.gem)
+  - embulk run src/test/resources/config.yml
 
 before_deploy:
   - echo '---' > ~/.gem/credentials

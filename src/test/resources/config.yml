@@ -1,0 +1,14 @@
+in:
+  type: file
+  path_prefix: src/test/resources/data.xml
+  parser:
+    type: xpath2
+    root: '/ns1:root/ns2:entry'
+    schema:
+      - { path: 'ns2:id', name: id, type: long }
+      - { path: 'ns2:title', name: title, type: string }
+      - { path: 'ns2:meta/ns2:author', name: author, type: string }
+      - { path: 'ns2:date', name: date, type: timestamp, format: '%Y%m%d' }
+    namespaces: {ns1: 'http://example.com/ns1/', ns2: 'http://example.com/ns2/'}
+out:
+  type: stdout
