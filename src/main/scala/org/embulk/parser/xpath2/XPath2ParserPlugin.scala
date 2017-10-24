@@ -34,7 +34,12 @@ class XPath2ParserPlugin extends ParserPlugin {
 
     val timestampParsers: Map[String, TimestampParser] = task.getSchema.columns.asScala
       .collect { case ColumnConfig(_, name, _, Some(timestampColumnOption), _) => (name, new TimestampParser(task, timestampColumnOption)) }.toMap
-    val columnsWithIndex: Seq[(ColumnConfig, Int)] = task.getSchema.columns.asScala.zipWithIndex
+
+    def declareXPathNS(ap: AutoPilot): Unit = {
+      task.getNamespaces.conf.asScala.foreach { case (prefix, namespaceURI) =>
+        ap.declareXPathNameSpace(prefix, namespaceURI)
+      }
+    }
 
     val vg = new VTDGen
 
@@ -47,19 +52,23 @@ class XPath2ParserPlugin extends ParserPlugin {
 
           val nav = vg.getNav
           val rootElementAutoPilot = new AutoPilot(nav)
-          val columnElementAutoPilot = new AutoPilot(nav)
-          task.getNamespaces.conf.asScala.foreach { case (prefix, namespaceURI) =>
-            rootElementAutoPilot.declareXPathNameSpace(prefix, namespaceURI)
-            columnElementAutoPilot.declareXPathNameSpace(prefix, namespaceURI)
-          }
+          declareXPathNS(rootElementAutoPilot)
+
+          val columnElementAutoPilots: Seq[AutoPilot] =
+            task.getSchema.columns.asScala.map { cc =>
+              val columnElementAutoPilot = new AutoPilot(nav)
+              declareXPathNS(columnElementAutoPilot)
+              columnElementAutoPilot.selectXPath(cc.path)
+              columnElementAutoPilot
+            }
 
           @tailrec
           def execEachRecord(rootAp: AutoPilot): Unit = if (rootAp.evalXPath() != -1) {
             nav.push()
             try {
-              columnsWithIndex.foreach { case (columnConfig, idx) =>
+              columnElementAutoPilots.zipWithIndex.foreach { case (columnElementAutoPilot, idx) =>
                 nav.push()
-                columnElementAutoPilot.selectXPath(columnConfig.path)
+                columnElementAutoPilot.resetXPath()
                 val column = schema.getColumn(idx)
                 handleColumn(pb, nav, columnElementAutoPilot, column, timestampParsers)
                 nav.pop()
