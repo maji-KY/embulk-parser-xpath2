@@ -2,6 +2,7 @@
 [![Gem Version](https://badge.fury.io/rb/embulk-parser-xpath2.svg)](https://badge.fury.io/rb/embulk-parser-xpath2)
 [![Build Status](https://travis-ci.org/maji-KY/embulk-parser-xpath2.svg?branch=develop)](https://travis-ci.org/maji-KY/embulk-parser-xpath2)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/1af04aa85e2b477e945c93158512d3b2)](https://www.codacy.com/app/maji-KY/embulk-parser-xpath2?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=maji-KY/embulk-parser-xpath2&amp;utm_campaign=Badge_Grade)
+[![CodeFactor](https://www.codefactor.io/repository/github/maji-ky/embulk-parser-xpath2/badge)](https://www.codefactor.io/repository/github/maji-ky/embulk-parser-xpath2)
 [![Known Vulnerabilities](https://snyk.io/test/github/maji-ky/embulk-parser-xpath2/badge.svg)](https://snyk.io/test/github/maji-ky/embulk-parser-xpath2)
 
 Embulk parser plugin for parsing xml data by XPath perfectly!

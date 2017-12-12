@@ -1,4 +1,4 @@
-val embulkVersion = "0.8.35"
+val embulkVersion = "0.8.39"
 
 lazy val commonSettings = Seq(
   organization := "com.github.maji-KY",
