@@ -1,8 +1,6 @@
 package org.embulk.parser.xpath2
 
-import org.embulk.config.Task
-import org.embulk.config.Config
-import org.embulk.config.ConfigDefault
+import org.embulk.config.{Config, ConfigDefault, Task}
 import org.embulk.parser.xpath2.config.{NamespacesConfig, SchemaConfig}
 import org.embulk.spi.time.TimestampParser
 
