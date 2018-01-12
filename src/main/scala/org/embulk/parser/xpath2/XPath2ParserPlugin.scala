@@ -3,12 +3,11 @@ package org.embulk.parser.xpath2
 import com.google.common.io.ByteStreams
 import com.ximpleware.{AutoPilot, VTDGen, VTDNav}
 import org.embulk.config._
-import org.embulk.parser.xpath2.config.ColumnConfig
+import org.embulk.parser.xpath2.config.{ColumnConfig, JsonStructureElement}
 import org.embulk.spi._
 import org.embulk.spi.`type`._
 import org.embulk.spi.time.TimestampParser
 import org.embulk.spi.util.FileInputInputStream
-import org.msgpack.value.{Value, Variable}
 import org.slf4j.Logger
 
 import scala.annotation.tailrec
@@ -33,7 +32,10 @@ class XPath2ParserPlugin extends ParserPlugin {
     val stopOnInvalidRecord: Boolean = task.getStopOnInvalidRecord
 
     val timestampParsers: Map[String, TimestampParser] = task.getSchema.columns.asScala
-      .collect { case ColumnConfig(_, name, _, Some(timestampColumnOption), _) => (name, new TimestampParser(task, timestampColumnOption)) }.toMap
+      .collect { case ColumnConfig(_, name, _, Some(timestampColumnOption), _, _) => (name, new TimestampParser(task, timestampColumnOption)) }.toMap
+
+    val jsonStructures: Map[String, Seq[JsonStructureElement]] = task.getSchema.columns.asScala
+      .collect { case ColumnConfig(_, name, _,  _, Some(jsonColumnOption), _) => (name, jsonColumnOption.structure.asScala) }.toMap
 
     def declareXPathNS(ap: AutoPilot): Unit = {
       task.getNamespaces.conf.asScala.foreach { case (prefix, namespaceURI) =>
@@ -67,11 +69,11 @@ class XPath2ParserPlugin extends ParserPlugin {
             nav.push()
             try {
               columnElementAutoPilots.zipWithIndex.foreach { case (columnElementAutoPilot, idx) =>
-                nav.push()
-                columnElementAutoPilot.resetXPath()
-                val column = schema.getColumn(idx)
-                handleColumn(pb, nav, columnElementAutoPilot, column, timestampParsers)
-                nav.pop()
+                VTD.withinContext(nav) {
+                  columnElementAutoPilot.resetXPath()
+                  val column = schema.getColumn(idx)
+                  handleColumn(pb, nav, columnElementAutoPilot, column, timestampParsers, jsonStructures)
+                }
               }
               pb.addRecord()
             } catch {
@@ -95,17 +97,9 @@ class XPath2ParserPlugin extends ParserPlugin {
     }
   }
 
-  final def handleColumn(pb: PageBuilder, nav: VTDNav, columnAp: AutoPilot, column: Column, timestampParsers: Map[String, TimestampParser]): Unit = {
+  final def handleColumn(pb: PageBuilder, nav: VTDNav, columnAp: AutoPilot, column: Column, timestampParsers: Map[String, TimestampParser], jsonStructures: Map[String, Seq[JsonStructureElement]]): Unit = {
     if (column.getType.isInstanceOf[JsonType]) {
-      val list = new java.util.ArrayList[Value]()
-      @tailrec
-      def eachJsonValue(cAp: AutoPilot): Unit = if (cAp.evalXPath() != -1) {
-        val index = nav.getText
-        if (index != -1) list.add(new Variable().setStringValue(nav.toString(index)).asStringValue())
-        eachJsonValue(cAp)
-      }
-      eachJsonValue(columnAp)
-      val jsonValue = new Variable().setArrayValue(list).asArrayValue()
+      val jsonValue = MsgPackEncoder.encode(nav, columnAp, column, jsonStructures.get(column.getName))
       pb.setJson(column, jsonValue)
     } else {
       if (columnAp.evalXPath() == -1) {

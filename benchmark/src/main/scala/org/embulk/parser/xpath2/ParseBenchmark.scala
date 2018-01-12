@@ -41,7 +41,7 @@ class ParseBenchmark  {
 
 object ParseBenchmark {
 
-  val TestRecordSize = 100 * 1000
+  val TestRecordSize = 10 * 1000
 
   val test = new XPath2ParserPluginSpec()
   val runtime = new EmbulkTestRuntime
