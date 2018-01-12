@@ -41,7 +41,7 @@ object MsgPackEncoder {
         constructJsonMap(nav, columnAp, column, structure).toSeq
       }
     }
-    val mergedMap = keyValues.toSeq.groupBy(_._1).map { case (k, v)=>
+    val mergedMap = keyValues.toSeq.groupBy { case (k, _) => k }.map { case (k, v)=>
       val mergedValues = v.flatMap {
         case (_, x: Seq[Any]) => x
         case _ => sys.error("Root element supports array only. Please reconsider the configuration.")
