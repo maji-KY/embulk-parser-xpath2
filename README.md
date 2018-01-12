@@ -11,6 +11,7 @@ Embulk parser plugin for parsing xml data by XPath perfectly!
 
 - namespace awareness
 - nullable columns
+- complex json array columns (with restrictions)
 
 ## Overview
 
@@ -61,6 +62,106 @@ Then you can fetch entries from the following xml:
   </ns2:entry>
 </ns1:root>
 ```
+
+## complex json array column
+
+### Usage
+
+```yaml
+parser:
+  type: xpath2
+  root: '/ns1:root/ns2:entry'
+  schema:
+    - { path: 'ns2:id', name: id, type: long }
+    - path: 'ns2:list'
+      name: list
+      type: json
+      structure: # adding structure key to enabling complex json array column
+        - path: 'ns2:list'
+          name: list
+          type: array
+        - path: 'ns2:list/ns2:elements'
+          name: elements
+          type: array
+        - path: 'ns2:list/ns2:elements/ns2:name'
+          name: elementName
+          type: string
+        - path: 'ns2:list/ns2:elements/ns2:value'
+          name: elementValue
+          type: long
+        - path: 'ns2:list/ns2:elements/ns2:active'
+          name: elementActive
+          type: boolean
+  namespaces: {ns1: 'http://example.com/ns1/', ns2: 'http://example.com/ns2/'}
+```
+
+### Structure configuration
+- **path**: specify path from the XPath of the column (string, required)
+- **name**: json key name (string)
+- **type**: json data type (One of array, string, long, boolean., required)
+
+Then you can fetch entries from the following xml:
+```xml
+<?xml version="1.0"?>
+<ns1:root
+        xmlns:ns1="http://example.com/ns1/"
+        xmlns:ns2="http://example.com/ns2/">
+    <ns2:entry>
+        <ns2:id>1</ns2:id>
+        <ns2:list>
+            <ns2:elements>
+                <ns2:name>foo1</ns2:name>
+                <ns2:value>1</ns2:value>
+                <ns2:active>true</ns2:active>
+            </ns2:elements>
+            <ns2:elements>
+                <ns2:name>foo2</ns2:name>
+                <ns2:value>2</ns2:value>
+                <ns2:active>false</ns2:active>
+            </ns2:elements>
+        </ns2:list>
+        <ns2:list>
+            <ns2:elements>
+                <ns2:name>bar1</ns2:name>
+                <ns2:value>3</ns2:value>
+                <ns2:active>true</ns2:active>
+            </ns2:elements>
+        </ns2:list>
+    </ns2:entry>
+</ns1:root>
+```
+
+result of `list` column:
+```json
+{
+  "list": [
+    {
+      "elements": [
+        {
+          "elementActive": true,
+          "elementName": "foo1",
+          "elementValue": 1
+        },
+        {
+          "elementActive": false,
+          "elementName": "foo2",
+          "elementValue": 2
+        }
+      ]
+    },
+    {
+      "elements": [
+        {
+          "elementActive": true,
+          "elementName": "bar1",
+          "elementValue": 3
+        }
+      ]
+    }
+  ]
+}
+```
+
 ## Build
 
 ```
