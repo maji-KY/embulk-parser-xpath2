@@ -1,0 +1,30 @@
+in:
+  type: file
+  path_prefix: src/test/resources/data.xml
+  parser:
+    type: xpath2
+    root: '/ns1:root/ns2:entry'
+    schema:
+      - { path: 'ns2:id', name: id, type: long }
+      - path: 'ns2:list'
+        name: list
+        type: json
+        structure:
+          - path: 'ns2:list'
+            name: list
+            type: array
+          - path: 'ns2:list/ns2:elements'
+            name: elements
+            type: array
+          - path: 'ns2:list/ns2:elements/ns2:name'
+            name: elementName
+            type: string
+          - path: 'ns2:list/ns2:elements/ns2:value'
+            name: elementValue
+            type: long
+          - path: 'ns2:list/ns2:elements/ns2:active'
+            name: elementActive
+            type: boolean
+    namespaces: {ns1: 'http://example.com/ns1/', ns2: 'http://example.com/ns2/'}
+out:
+  type: stdout
