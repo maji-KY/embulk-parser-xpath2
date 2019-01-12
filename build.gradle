@@ -1,6 +1,6 @@
 plugins {
-    id "com.jfrog.bintray" version "1.1"
-    id "com.github.jruby-gradle.base" version "0.1.5"
+    id "com.jfrog.bintray" version "1.8.4"
+    id "com.github.jruby-gradle.base" version "1.6.0"
     id "java"
     id "scala"
 }
@@ -13,9 +13,9 @@ configurations {
     provided
 }
 
-version = "0.2.0"
+version = "0.2.1"
 ext {
-    embulkVersion = "0.8.39"
+    embulkVersion = "0.9.12"
 }
 
 sourceCompatibility = 1.8
@@ -27,10 +27,10 @@ dependencies {
     provided "org.embulk:embulk-core:${embulkVersion}"
     testCompile "org.embulk:embulk-core:${embulkVersion}:tests"
     testCompile "org.embulk:embulk-standards:${embulkVersion}"
-    testCompile "junit:junit:4.+"
+    testCompile "junit:junit:4.12"
 
-    compile group: 'org.scala-lang', name: 'scala-library', version: '2.12.4'
-    testCompile group: 'org.scalatest', name: 'scalatest_2.12', version: '3.0.4'
+    compile group: 'org.scala-lang', name: 'scala-library', version: '2.12.8'
+    testCompile group: 'org.scalatest', name: 'scalatest_2.12', version: '3.0.5'
 
 }
 
@@ -49,14 +49,16 @@ test {
 }
 
 task gem(type: JRubyExec, dependsOn: ["gemspec", "classpath"]) {
-    jrubyArgs "-rrubygems/gem_runner", "-eGem::GemRunner.new.run(ARGV)", "build"
-    script "${project.name}.gemspec"
+    jrubyArgs "-S"
+    script "gem"
+    scriptArgs "build", "${project.name}.gemspec"
     doLast { ant.move(file: "${project.name}-${project.version}.gem", todir: "pkg") }
 }
 
 task gemPush(type: JRubyExec, dependsOn: ["gem"]) {
-    jrubyArgs "-rrubygems/gem_runner", "-eGem::GemRunner.new.run(ARGV)", "push"
-    script "pkg/${project.name}-${project.version}.gem"
+    jrubyArgs "-S"
+    script "gem"
+    scriptArgs "push", "pkg/${project.name}-${project.version}.gem"
 }
 
 task "package"(dependsOn: ["gemspec", "classpath"]) {
