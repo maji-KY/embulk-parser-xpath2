@@ -52,7 +52,12 @@ task gem(type: JRubyExec, dependsOn: ["gemspec", "classpath"]) {
     jrubyArgs "-S"
     script "gem"
     scriptArgs "build", "${project.name}.gemspec"
-    doLast { ant.move(file: "${project.name}-${project.version}.gem", todir: "pkg") }
+    script "ls -l"
+    doLast {
+        ant.move(file: "${project.name}-${project.version}.gem", todir: "pkg")
+        script "ls -l"
+        script "ls -l pkg"
+    }
 }
 
 task gemPush(type: JRubyExec, dependsOn: ["gem"]) {

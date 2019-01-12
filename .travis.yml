@@ -11,6 +11,8 @@ before_script:
 script:
   - gradle test
   - gradle gem
+  - ls -l
+  - ls -l pkg
   - embulk gem install --local $(ls pkg/embulk-parser-xpath2-*.gem)
   - embulk run src/test/resources/config.yml
 
