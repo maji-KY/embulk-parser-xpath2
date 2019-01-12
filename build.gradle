@@ -1,6 +1,6 @@
 plugins {
     id "com.jfrog.bintray" version "1.8.4"
-    id "com.github.jruby-gradle.base" version "1.6.0"
+    id "com.github.jruby-gradle.base" version "1.5.0"
     id "java"
     id "scala"
 }
@@ -91,7 +91,7 @@ Gem::Specification.new do |spec|
 
   #spec.add_dependency 'YOUR_GEM_DEPENDENCY', ['~> YOUR_GEM_DEPENDENCY_VERSION']
   spec.add_development_dependency 'bundler', ['~> 1.0']
-  spec.add_development_dependency 'rake', ['>= 10.0']
+  spec.add_development_dependency 'rake', ['~> 10.0']
 end
 /$)
     }
