@@ -2,7 +2,7 @@ language: ruby
 jdk:
   - oraclejdk8
 rvm:
-  - jruby-head
+  - jruby-9.1.9.0
 
 before_script:
   - curl --create-dirs -o ~/bin/embulk -L http://dl.embulk.org/embulk-latest.jar
