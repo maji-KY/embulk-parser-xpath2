@@ -7,7 +7,6 @@ import com.google.common.base.Optional
 import org.embulk.config.{Config, ConfigDefault, ConfigSource}
 import org.embulk.spi.`type`.{JsonType, TimestampType, Type}
 import org.embulk.spi.time.TimestampParser.TimestampColumnOption
-import org.joda.time.DateTimeZone
 
 case class SchemaConfig @JsonCreator()(columns: java.util.List[ColumnConfig]) {
   @JsonValue()
@@ -33,19 +32,19 @@ case class ColumnConfig(path: String, name: String, `type`: Type, timestampOptio
 
 }
 
-private class TimestampColumnOptionImpl(timezone: Optional[DateTimeZone], format: Optional[String], date: Optional[String]) extends TimestampColumnOption {
+private class TimestampColumnOptionImpl(timezone: Optional[String], format: Optional[String], date: Optional[String]) extends TimestampColumnOption {
 
   @JsonCreator()
   def this(src: ConfigSource) = {
     this(
-      src.get(classOf[Optional[String]], "timezone", Optional.absent[String]()).transform(x => DateTimeZone.forID(x)),
+      src.get(classOf[Optional[String]], "timezone", Optional.absent[String]()),
       src.get(classOf[Optional[String]], "format", Optional.absent[String]()),
       src.get(classOf[Optional[String]], "date", Optional.absent[String]()))
   }
 
   @Config("timezone")
   @ConfigDefault("null")
-  override val getTimeZone = timezone
+  override val getTimeZoneId = timezone
 
   @Config("format")
   @ConfigDefault("null")

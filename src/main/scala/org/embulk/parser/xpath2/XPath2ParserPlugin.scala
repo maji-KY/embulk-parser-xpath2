@@ -32,7 +32,7 @@ class XPath2ParserPlugin extends ParserPlugin {
     val stopOnInvalidRecord: Boolean = task.getStopOnInvalidRecord
 
     val timestampParsers: Map[String, TimestampParser] = task.getSchema.columns.asScala
-      .collect { case ColumnConfig(_, name, _, Some(timestampColumnOption), _, _) => (name, new TimestampParser(task, timestampColumnOption)) }.toMap
+      .collect { case ColumnConfig(_, name, _, Some(timestampColumnOption), _, _) => (name, TimestampParser.of(task, timestampColumnOption)) }.toMap
 
     val jsonStructures: Map[String, Seq[JsonStructureElement]] = task.getSchema.columns.asScala
       .collect { case ColumnConfig(_, name, _,  _, Some(jsonColumnOption), _) => (name, jsonColumnOption.structure.asScala) }.toMap
